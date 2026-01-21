@@ -87,7 +87,7 @@
 
 ## 5. 📝 文档规范 (README.md)
 
-`README.md` 是交付的一部分，**必须**包含且仅包含以下真实有效的信息：
+`README.md` 是交付的一部分，**必须**包含且仅包含以下真实有效的信息,后续按照项目实际情况编写修改：
 
 ```markdown
 # 项目名称
@@ -109,3 +109,110 @@
 
 ## 🧪 测试账号
 - Admin: admin / 123456
+
+---
+
+## 🐳 Docker 镜像源配置 (Docker Registry Configuration)
+
+### 推荐配置（基于实际项目验证）
+
+#### 1. Docker 镜像源
+**使用官方 Docker Hub 镜像**（已验证稳定可用）
+
+```yaml
+# docker-compose.yml 示例
+services:
+  db:
+    image: mysql:8.0                    # MySQL 数据库
+  
+  backend:
+    build: ./backend
+    # Dockerfile 中使用：
+    # - Node.js: node:20-alpine
+    # - Java: maven:3.9-eclipse-temurin-17-alpine (构建)
+    #         eclipse-temurin:17-jre-alpine (运行)
+    # - Python: python:3.11-slim
+  
+  frontend:
+    build: ./frontend
+    # Dockerfile 中使用：
+    # - node:20-alpine (构建)
+    # - nginx:alpine (运行)
+```
+
+#### 2. npm 依赖源
+**使用淘宝镜像**（国内访问快）
+
+在 `Dockerfile` 中添加：
+```dockerfile
+RUN npm config set registry https://registry.npmmirror.com
+```
+
+### 常用镜像推荐
+
+| 技术栈 | 推荐镜像 | 说明 |
+|--------|---------|------|
+| MySQL | `mysql:8.0` | 数据库 |
+| Node.js | `node:20-alpine` | 前端/后端构建 |
+| Nginx | `nginx:alpine` | 前端生产环境 |
+| Java (构建) | `maven:3.9-eclipse-temurin-17-alpine` | Spring Boot 构建 |
+| Java (运行) | `eclipse-temurin:17-jre-alpine` | Spring Boot 运行 |
+| Python | `python:3.11-slim` | Python 应用 |
+| PostgreSQL | `postgres:15-alpine` | PostgreSQL 数据库 |
+| Redis | `redis:7-alpine` | Redis 缓存 |
+
+### 配置示例
+
+#### Node.js 项目 Dockerfile
+```dockerfile
+# 构建阶段
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm config set registry https://registry.npmmirror.com
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# 生产阶段
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+#### Spring Boot 项目 Dockerfile
+```dockerfile
+# 构建阶段
+FROM maven:3.9-eclipse-temurin-17-alpine AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline
+COPY src ./src
+RUN mvn package -DskipTests
+
+# 运行阶段
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+### 使用建议
+
+1. ✅ **优先使用官方镜像**：稳定可靠，无需配置镜像代理
+2. ✅ **使用 Alpine 版本**：镜像体积小，构建速度快
+3. ✅ **配置 npm 淘宝源**：加速国内依赖下载
+4. ✅ **多阶段构建**：减小最终镜像体积
+
+### 常见问题
+
+**Q: Docker 镜像拉取失败？**  
+A: 检查网络连接，确保 Docker Desktop 正常运行
+
+**Q: npm install 很慢？**  
+A: 确保已配置淘宝镜像源：`npm config set registry https://registry.npmmirror.com`
+
+**Q: 是否需要配置 Docker Hub 镜像加速器？**  
+A: 通常不需要，官方镜像可以直接拉取。如遇到问题再考虑配置
