@@ -4,10 +4,10 @@
 # 用法: ./package.sh [输出文件名]
 
 # 设置输出文件名（默认使用项目名 + 时间戳）
-OUTPUT_NAME=${1:-"longmao-repo-demo-$(date +%Y%m%d-%H%M%S).zip"}
+OUTPUT_NAME=${1:-"$(basename "$(pwd)")-$(date +%Y%m%d-%H%M%S).zip"}
 
-# 固定项目目录名
-PROJECT_DIR="longmao-repo-demo"
+# 自动获取当前目录名作为项目目录名
+PROJECT_DIR=$(basename "$(pwd)")
 
 echo "📦 开始打包项目..."
 echo "📁 项目目录: $PROJECT_DIR"
