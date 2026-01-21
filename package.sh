@@ -43,10 +43,34 @@ rsync -a --progress \
 
 echo ""
 echo "🗜️  压缩文件..."
-cd "$TEMP_DIR" && zip -r -q "$OLDPWD/$OUTPUT_NAME" "$PROJECT_DIR"
+
+# 保存当前目录
+CURRENT_DIR=$(pwd)
+
+# 切换到临时目录并压缩
+cd "$TEMP_DIR" || {
+  echo "❌ 错误: 无法切换到临时目录"
+  rm -rf "$TEMP_DIR"
+  exit 1
+}
+
+zip -r -q "$CURRENT_DIR/$OUTPUT_NAME" "$PROJECT_DIR" || {
+  echo "❌ 错误: 压缩失败"
+  rm -rf "$TEMP_DIR"
+  exit 1
+}
+
+# 返回原目录
+cd "$CURRENT_DIR"
 
 # 清理临时目录
 rm -rf "$TEMP_DIR"
+
+# 检查文件是否存在
+if [ ! -f "$OUTPUT_NAME" ]; then
+  echo "❌ 错误: 压缩文件未创建"
+  exit 1
+fi
 
 # 获取文件大小
 SIZE=$(du -h "$OUTPUT_NAME" | cut -f1)
