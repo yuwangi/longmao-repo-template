@@ -148,7 +148,8 @@ services:
 RUN npm config set registry https://registry.npmmirror.com
 ```
 
-### 常用镜像推荐
+### 镜像推荐
+尽量使用镜像加速源：docker.m.daocloud.io
 
 | 技术栈 | 推荐镜像 | 说明 |
 |--------|---------|------|
@@ -201,7 +202,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ### 使用建议
 
-1. ✅ **优先使用官方镜像**：稳定可靠，无需配置镜像代理
+1. ✅ **优先使用镜像加速**：配置镜像代理：docker.m.daocloud.io
 2. ✅ **使用 Alpine 版本**：镜像体积小，构建速度快
 3. ✅ **配置 npm 淘宝源**：加速国内依赖下载
 4. ✅ **多阶段构建**：减小最终镜像体积
