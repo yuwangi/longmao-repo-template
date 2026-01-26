@@ -129,8 +129,8 @@ services:
     build: ./backend
     # Dockerfile 中使用：
     # - Node.js: node:20-alpine
-    # - Java: maven:3.9-eclipse-temurin-17-alpine (构建)
-    #         eclipse-temurin:17-jre-alpine (运行)
+    # - Java: maven:3.9-eclipse-temurin-17 (构建)
+    #         eclipse-temurin:17-jre (运行)
     # - Python: python:3.11-slim
   
   frontend:
@@ -148,16 +148,45 @@ services:
 RUN npm config set registry https://registry.npmmirror.com
 ```
 
-### 镜像推荐
-尽量使用镜像加速源：docker.m.daocloud.io
+#### 3. Maven 依赖源
+**使用阿里云镜像**（解决 Java 构建慢的问题）
+
+需要在 `backend` 目录下创建 `settings.xml` 并通过 `Dockerfile` 挂载：
+```xml
+<!-- settings.xml 示例 -->
+<settings>
+    <mirrors>
+        <mirror>
+            <id>aliyunmaven</id>
+            <mirrorOf>*</mirrorOf>
+            <name>aliyun maven</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+        </mirror>
+    </mirrors>
+</settings>
+```
+
+#### 4. 前端构建加速规范 (Fast Build with npm ci)
+
+为了极致的构建速度和依赖一致性，**必须**遵循以下流程：
+
+1.  **本地预处理**: 在提交代码前，**必须**在本地运行一次 `npm install`（或 `yarn install`），确保 `package-lock.json`（或 `yarn.lock`）文件存在且是最新的。
+2.  **锁文件提交**: **绝对严禁**在 `.gitignore` 中忽略锁文件。必须将锁文件提交至仓库，这是容器内高效构建的前提。
+3.  **容器内安装**: 在 `Dockerfile` 中，必须使用 `npm ci` 代替 `npm install`。
+    -   **优势**: `npm ci` 比 `npm install` 快 2-3 倍，且会根据锁文件进行 100% 确定性的安装，避免“本地能跑，容器报错”的灵异问题。
+    -   **注意**: `npm ci` 要求工作目录必须存在 `package-lock.json`，否则会报错。
+
+---
+
+### 常用镜像推荐
 
 | 技术栈 | 推荐镜像 | 说明 |
-|--------|---------|------|
+| :--- | :--- | :--- |
 | MySQL | `mysql:8.0` | 数据库 |
-| Node.js | `node:20-alpine` | 前端/后端构建 |
+| Node.js | `node:20-slim` | 前端/后端构建 |
 | Nginx | `nginx:alpine` | 前端生产环境 |
-| Java (构建) | `maven:3.9-eclipse-temurin-17-alpine` | Spring Boot 构建 |
-| Java (运行) | `eclipse-temurin:17-jre-alpine` | Spring Boot 运行 |
+| Java (构建) | `maven:3.9-eclipse-temurin-17` | Spring Boot 构建 |
+| Java (运行) | `eclipse-temurin:17-jre` | 核心修改。切换到基于 Ubuntu 的镜像，彻底解决 QA 担心的兼容性风险。 |
 | Python | `python:3.11-slim` | Python 应用 |
 | PostgreSQL | `postgres:15-alpine` | PostgreSQL 数据库 |
 | Redis | `redis:7-alpine` | Redis 缓存 |
@@ -182,18 +211,25 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
-#### Spring Boot 项目 Dockerfile
+#### Spring Boot 项目 Dockerfile (极致加速分层版)
 ```dockerfile
-# 构建阶段
-FROM maven:3.9-eclipse-temurin-17-alpine AS build
+# 构建阶段 (使用层缓存下载依赖)
+FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
+
+# 1. 先拷贝配置和 pom.xml
+COPY settings.xml .
 COPY pom.xml .
-RUN mvn dependency:go-offline
+
+# 2. 预下载依赖 (只要 pom.xml 不变，这一层就会被 Docker 缓存)
+RUN mvn -s settings.xml dependency:go-offline -B
+
+# 3. 拷贝源码并打包
 COPY src ./src
-RUN mvn package -DskipTests
+RUN mvn -s settings.xml package -DskipTests
 
 # 运行阶段
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
@@ -202,7 +238,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ### 使用建议
 
-1. ✅ **优先使用镜像加速**：配置镜像代理：docker.m.daocloud.io
+1. ✅ **优先使用官方镜像**：稳定可靠，无需配置镜像代理
 2. ✅ **使用 Alpine 版本**：镜像体积小，构建速度快
 3. ✅ **配置 npm 淘宝源**：加速国内依赖下载
 4. ✅ **多阶段构建**：减小最终镜像体积
@@ -217,3 +253,6 @@ A: 确保已配置淘宝镜像源：`npm config set registry https://registry.np
 
 **Q: 是否需要配置 Docker Hub 镜像加速器？**  
 A: 通常不需要，官方镜像可以直接拉取。如遇到问题再考虑配置
+
+**Q: Docker端口冲突问题？**  
+A: 根据项目文件夹的名称进行设置比如207文件夹，前端端口设置为3207，后端端口设置为8207
