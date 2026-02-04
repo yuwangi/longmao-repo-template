@@ -22,8 +22,6 @@ PACKAGE_DIR="$TEMP_DIR/$PROJECT_DIR"
 echo "📋 复制项目文件..."
 mkdir -p "$PACKAGE_DIR"
 rsync -a --progress \
-  --include='README.md' \
-  --exclude='*.md' \
   --exclude='.gitignore' \
   --exclude='node_modules' \
   --exclude='.git' \
