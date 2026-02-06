@@ -3,11 +3,11 @@
 # 项目打包脚本 - 生成干净的代码包
 # 用法: ./package.sh [输出文件名]
 
-# 设置输出文件名（默认使用项目名 + 时间戳）
-OUTPUT_NAME=${1:-"$(basename "$(pwd)")-$(date +%Y%m%d-%H%M%S).zip"}
-
 # 自动获取当前目录名作为项目目录名
 PROJECT_DIR=$(basename "$(pwd)")
+
+# 设置输出文件名（默认：label-当前目录名.zip）
+OUTPUT_NAME=${1:-"label-${PROJECT_DIR}.zip"}
 
 echo "📦 开始打包项目..."
 echo "📁 项目目录: $PROJECT_DIR"
