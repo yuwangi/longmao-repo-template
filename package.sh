@@ -38,8 +38,6 @@ rsync -a --progress \
   --exclude='.idea' \
   --exclude='*.zip' \
   --exclude='package.sh' \
-  --exclude='backend/.env' \
-  --exclude='frontend/.env' \
   --exclude='.github' \
   . "$PACKAGE_DIR/"
 
