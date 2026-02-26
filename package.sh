@@ -27,6 +27,7 @@ rsync -a --progress \
   --exclude='.git' \
   --exclude='dist' \
   --exclude='build' \
+  --exclude='target' \
   --exclude='.DS_Store' \
   --exclude='*.log' \
   --exclude='coverage' \
@@ -39,6 +40,11 @@ rsync -a --progress \
   --exclude='*.zip' \
   --exclude='package.sh' \
   --exclude='.github' \
+  --exclude='user_rule.md' \
+  --exclude='自测文档说明.txt' \
+  --exclude='prompt.md' \
+  --exclude='checklist.md' \
+  --exclude='run.sh' \
   . "$PACKAGE_DIR/"
 
 echo ""
