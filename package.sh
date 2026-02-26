@@ -41,6 +41,7 @@ rsync -a --progress \
   --exclude='package.sh' \
   --exclude='.github' \
   --exclude='user_rule.md' \
+  --include='requirements.txt' \
   --exclude='*.txt' \
   --exclude='prompt.md' \
   --exclude='checklist.md' \
